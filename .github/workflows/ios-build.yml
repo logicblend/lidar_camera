@@ -1,0 +1,45 @@
+name: iOS Build
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build_ios:
+    name: Build iOS App (Unsigned)
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set Up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          # Using latest stable version
+          
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build iOS App (No Codesign)
+        # This builds the Runner.app without requiring Apple Developer Certificates
+        run: flutter build ios --release --no-codesign
+
+      - name: Package to Unsigned IPA
+        run: |
+          # Create a Payload folder which is required for IPA structure
+          mkdir -p build/ios/iphoneos/Payload
+          # Move the compiled app into the Payload folder
+          mv build/ios/iphoneos/Runner.app build/ios/iphoneos/Payload/
+          # Zip it up and change the extension to .ipa
+          cd build/ios/iphoneos
+          zip -qq -r -9 DollyZoom.ipa Payload
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DollyZoom_iOS_Unsigned
+          path: build/ios/iphoneos/DollyZoom.ipa
+          retention-days: 7
